@@ -53,13 +53,13 @@ async function validateAsset(
 ): Promise<string | null> {
   if (assetType === 'skill') {
     if (resolved.type === 'http-file' || resolved.type === 'inline-json' || resolved.type === 'inline-md') {
-      return 'Skill 资产必须指向目录来源（本地路径或 Git URL），不支持内联内容或直接 HTTP(S) URL';
+      return 'Skill assets must point to a directory source (local path or Git URL); inline content and direct HTTP(S) URLs are not supported';
     }
     const skillMdPath = path.join(resolved.localPath, 'SKILL.md');
     try {
       await fs.promises.access(skillMdPath);
     } catch {
-      return `Skill 目录内缺少 SKILL.md 文件（期望路径：${skillMdPath}）`;
+      return `Skill directory is missing a SKILL.md file (expected path: ${skillMdPath})`;
     }
     return null;
   }
@@ -68,10 +68,10 @@ async function validateAsset(
     try {
       await fs.promises.access(resolved.localPath);
     } catch {
-      return `MCP 来源文件不存在：${resolved.localPath}`;
+      return `MCP source file does not exist: ${resolved.localPath}`;
     }
     if (!resolved.localPath.endsWith('.json')) {
-      return `MCP 来源文件扩展名必须为 .json（得到：${resolved.localPath}）`;
+      return `MCP source file extension must be .json (got: ${resolved.localPath})`;
     }
     return null;
   }
@@ -80,10 +80,10 @@ async function validateAsset(
     try {
       await fs.promises.access(resolved.localPath);
     } catch {
-      return `来源文件不存在：${resolved.localPath}`;
+      return `Source file does not exist: ${resolved.localPath}`;
     }
     if (!resolved.localPath.endsWith('.md')) {
-      return `${assetType} 来源文件扩展名必须为 .md（得到：${resolved.localPath}）`;
+      return `${assetType} source file extension must be .md (got: ${resolved.localPath})`;
     }
     return null;
   }

@@ -31,11 +31,11 @@ export function inferName(source: string, options: InferNameOptions = {}): strin
       parsed = JSON.parse(s);
     } catch {
       throw new Error(
-        `内联 JSON 解析失败。格式应为 {"<name>":{...}}，例如：{"playwright":{"command":"npx","args":["-y","@playwright/mcp"]}}`,
+        `Failed to parse inline JSON. Expected format: {"<name>":{...}}, e.g.: {"playwright":{"command":"npx","args":["-y","@playwright/mcp"]}}`,
       );
     }
     if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
-      throw new Error(`内联 JSON 必须为对象类型`);
+      throw new Error(`Inline JSON must be an object`);
     }
     const obj = parsed as Record<string, unknown>;
     const unwrapped = unwrapMcpServers(obj);
@@ -45,7 +45,7 @@ export function inferName(source: string, options: InferNameOptions = {}): strin
     const keys = Object.keys(obj);
     if (keys.length !== 1) {
       throw new Error(
-        `内联 JSON 必须包含恰好一个 key（作为资产名称），当前有 ${keys.length} 个 key`,
+        `Inline JSON must contain exactly one key (used as the asset name), got ${keys.length} keys`,
       );
     }
     return keys[0]!;
@@ -64,7 +64,7 @@ export function inferName(source: string, options: InferNameOptions = {}): strin
       }
     }
     throw new Error(
-      `内联 Markdown 必须包含一级标题（如 # My Prompt）以推断资产名称`,
+      `Inline Markdown must contain a level-1 heading (e.g. # My Prompt) to infer the asset name`,
     );
   }
 
