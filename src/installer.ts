@@ -190,7 +190,7 @@ export async function runInstaller(
         });
       }
     } else {
-      const assetName = inferName(cleanSource);
+      const assetName = inferName(cleanSource, { isDirectorySource: item.assetType === 'skill' });
       resolvedItems.push({
         assetType: item.assetType,
         assetName,
