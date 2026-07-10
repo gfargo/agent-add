@@ -1,17 +1,27 @@
 import path from 'path';
 import { unwrapMcpServers } from '../utils/unwrap-mcp-servers.js';
 
+export interface InferNameOptions {
+  /**
+   * Set for sources that resolve to a directory (e.g. skill assets), where
+   * the last path segment / basename IS the asset name and must not have a
+   * trailing ".something" stripped as if it were a file extension.
+   */
+  isDirectorySource?: boolean;
+}
+
 /**
  * Infer asset name from source string.
  *
  * Rules:
  * 0. If inline JSON (starts with `{`): extract the single top-level key
  * 0. If inline Markdown (contains `\n`): extract first `# Heading` and kebab-case it
- * 1. If source contains `#path`, use last segment of path (minus extension)
+ * 1. If source contains `#path`, use last segment of path (minus extension, unless isDirectorySource)
  * 2. If git URL without #path (e.g. git@...repo.git), use repo name (strip .git)
- * 3. If local path or http-file URL, use filename without extension
+ * 3. If local path or http-file URL, use filename without extension (unless isDirectorySource)
  */
-export function inferName(source: string): string {
+export function inferName(source: string, options: InferNameOptions = {}): string {
+  const { isDirectorySource = false } = options;
   const s = source.trim(); // normalize: remove leading/trailing whitespace or BOM
 
   // Inline JSON: extract single top-level key as name
@@ -64,8 +74,8 @@ export function inferName(source: string): string {
     const subPath = s.slice(hashIdx + 1);
     const segments = subPath.split('/').filter(Boolean);
     if (segments.length > 0) {
-      const last = segments[segments.length - 1];
-      return stripExtension(last);
+      const last = segments[segments.length - 1]!;
+      return isDirectorySource ? last : stripExtension(last);
     }
   }
 
@@ -80,7 +90,7 @@ export function inferName(source: string): string {
 
   // Local path or HTTP file: use filename without extension
   const basename = path.basename(s.split('?')[0] ?? s);
-  return stripExtension(basename);
+  return isDirectorySource ? basename : stripExtension(basename);
 }
 
 function stripExtension(filename: string): string {
