@@ -38,3 +38,6 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Run contract tests (against built CLI)
+        run: npm run test:contract
