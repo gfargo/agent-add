@@ -3,6 +3,7 @@ import path from 'path';
 import os from 'os';
 import { readJSONOrNull, atomicWriteJSON, ensureDir } from '../utils/fs.js';
 import { unwrapMcpServers } from '../utils/unwrap-mcp-servers.js';
+import { deepEqualIgnoringKeyOrder } from '../utils/deep-equal.js';
 import type { AssetHandler, InstallJob, InstallResult } from './types.js';
 
 function getHomedir(): string {
@@ -75,7 +76,7 @@ async function handleTomlMcp(
 
     const existingIdx = mcpServers.findIndex((s) => s['name'] === assetName);
     if (existingIdx !== -1) {
-      if (JSON.stringify(mcpServers[existingIdx]) === JSON.stringify(entry)) {
+      if (deepEqualIgnoringKeyOrder(mcpServers[existingIdx], entry)) {
         return { job, status: 'exists', targetPath: configFilePath };
       }
       return {
@@ -100,7 +101,7 @@ async function handleTomlMcp(
     if (newServerConfig['env']) entry['env'] = newServerConfig['env'];
 
     if (assetName in mcpServers) {
-      if (JSON.stringify(mcpServers[assetName]) === JSON.stringify(entry)) {
+      if (deepEqualIgnoringKeyOrder(mcpServers[assetName], entry)) {
         return { job, status: 'exists', targetPath: configFilePath };
       }
       return {
