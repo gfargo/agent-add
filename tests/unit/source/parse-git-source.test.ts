@@ -68,6 +68,13 @@ describe('parseGitSource', () => {
         subPath: 'skills/pdf',
       });
     });
+    it('does not treat an @scope segment inside the subpath as a trailing ref', () => {
+      expect(parseGitSource('https://github.com/org/repo.git#packages/@scope/pkg')).toEqual({
+        repoUrl: 'https://github.com/org/repo.git',
+        ref: undefined,
+        subPath: 'packages/@scope/pkg',
+      });
+    });
   });
 
   describe('SSH URLs', () => {

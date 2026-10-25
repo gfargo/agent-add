@@ -4,7 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import type { ResolvedSource } from '../assets/types.js';
-import type { SourceType } from './index.js';
+import type { SourceType } from './detect.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -54,11 +54,12 @@ export function parseGitSource(source: string): ParsedGitSource {
   let ref = atIdx !== -1 ? withoutPath.slice(atIdx + 1) || undefined : undefined;
 
   // Step 3: if no ref was found before `#`, check for a trailing @ref after
-  // the subPath (the `#path@ref` ordering).
+  // the subPath (the `#path@ref` ordering). A trailing ref never contains "/",
+  // so a path segment like `packages/@scope/pkg` is left alone.
   let subPath = rawSubPath;
   if (!ref && rawSubPath) {
     const subAtIdx = rawSubPath.lastIndexOf('@');
-    if (subAtIdx !== -1) {
+    if (subAtIdx !== -1 && !rawSubPath.slice(subAtIdx + 1).includes('/')) {
       ref = rawSubPath.slice(subAtIdx + 1) || undefined;
       subPath = rawSubPath.slice(0, subAtIdx) || undefined;
     }

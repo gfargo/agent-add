@@ -1,5 +1,7 @@
 import path from 'path';
 import { unwrapMcpServers } from '../utils/unwrap-mcp-servers.js';
+import { detectSourceType, normalizeGitUrl } from './detect.js';
+import { parseGitSource } from './git.js';
 
 export interface InferNameOptions {
   /**
@@ -16,9 +18,12 @@ export interface InferNameOptions {
  * Rules:
  * 0. If inline JSON (starts with `{`): extract the single top-level key
  * 0. If inline Markdown (contains `\n`): extract first `# Heading` and kebab-case it
- * 1. If source contains `#path`, use last segment of path (minus extension, unless isDirectorySource)
- * 2. If git URL without #path (e.g. git@...repo.git), use repo name (strip .git)
- * 3. If local path or http-file URL, use filename without extension (unless isDirectorySource)
+ * 1. If git source with a subPath (`#path`, `#path@ref`, or a GitHub/GitLab tree/blob URL),
+ *    use the last segment of the parsed subPath (minus extension, unless isDirectorySource)
+ * 2. If git source without a subPath (e.g. git@...repo.git), use repo name (strip .git)
+ * 3. If http-file URL, use the last segment of the URL pathname, ignoring query and fragment
+ *    (minus extension, unless isDirectorySource)
+ * 4. If local path, use filename without extension (unless isDirectorySource)
  */
 export function inferName(source: string, options: InferNameOptions = {}): string {
   const { isDirectorySource = false } = options;
@@ -68,27 +73,39 @@ export function inferName(source: string, options: InferNameOptions = {}): strin
     );
   }
 
-  // Git URL with #path: take the last path segment
-  const hashIdx = s.indexOf('#');
-  if (hashIdx !== -1) {
-    const subPath = s.slice(hashIdx + 1);
-    const segments = subPath.split('/').filter(Boolean);
+  // Remote and local paths: normalize and parse exactly the way resolveSource
+  // does, so equivalent spellings of the same source get the same name.
+  const normalized = normalizeGitUrl(s);
+  const type = detectSourceType(normalized);
+
+  if (type === 'git-ssh' || type === 'git-https') {
+    const { repoUrl, subPath } = parseGitSource(normalized);
+    const segments = (subPath ?? '').split('/').filter(Boolean);
     if (segments.length > 0) {
       const last = segments[segments.length - 1]!;
       return isDirectorySource ? last : stripExtension(last);
     }
+    // No #path: the whole repo is the asset, so use the repo name without .git
+    const repoSegment = repoUrl.replace(/\/+$/, '').split(/[/:]/).pop() || repoUrl;
+    return repoSegment.replace(/\.git$/i, '');
   }
 
-  // Git SSH/HTTPS without #path: use repo name (strip @ref before extension stripping)
-  if (s.startsWith('git@') || (s.startsWith('https://') && s.includes('.git'))) {
-    const urlPart = s.split('#')[0];
-    const repoSegment = urlPart.split('/').pop() ?? urlPart.split(':').pop() ?? urlPart;
-    const atIdx = (repoSegment ?? '').indexOf('@');
-    const cleanSegment = atIdx !== -1 ? repoSegment!.slice(0, atIdx) : repoSegment;
-    return stripExtension(cleanSegment ?? urlPart);
+  if (type === 'http-file') {
+    // Name comes from the URL path only; query and fragment are ignored.
+    let pathname: string;
+    let hostname = '';
+    try {
+      const url = new URL(normalized);
+      pathname = url.pathname;
+      hostname = url.hostname;
+    } catch {
+      pathname = normalized.split(/[?#]/)[0] ?? normalized;
+    }
+    const basename = path.posix.basename(pathname) || hostname;
+    return isDirectorySource ? basename : stripExtension(basename);
   }
 
-  // Local path or HTTP file: use filename without extension
+  // Local path: use filename without extension
   const basename = path.basename(s.split('?')[0] ?? s);
   return isDirectorySource ? basename : stripExtension(basename);
 }

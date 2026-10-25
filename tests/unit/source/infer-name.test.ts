@@ -124,4 +124,46 @@ describe('inferName', () => {
       expect(inferName('./skills/e2e-guide')).toBe('e2e-guide');
     });
   });
+
+  describe('equivalent git sources get the same name', () => {
+    const equivalents = [
+      'https://git.example.com/org/repo.git#skills/pdf@main',
+      'https://git.example.com/org/repo.git@main#skills/pdf',
+      'https://github.com/org/repo/tree/main/skills/pdf',
+      'https://github.com/org/repo/tree/main/skills/pdf/',
+      'https://github.com/org/repo.git#skills/pdf@main',
+      'https://gitlab.com/org/repo/-/tree/main/skills/pdf',
+      'git@github.com:org/repo.git#skills/pdf@main',
+    ];
+
+    for (const source of equivalents) {
+      it(`infers "pdf" for ${source}`, () => {
+        expect(inferName(source, { isDirectorySource: true })).toBe('pdf');
+      });
+    }
+
+    it('names a GitHub blob URL after the file, ignoring a page anchor', () => {
+      expect(inferName('https://github.com/org/repo/blob/main/prompts/review.md#usage')).toBe('review');
+    });
+
+    it('names a bare repo after the repo, ignoring the ref', () => {
+      expect(inferName('https://github.com/org/repo/tree/main', { isDirectorySource: true })).toBe('repo');
+    });
+  });
+
+  describe('HTTP file URLs', () => {
+    const variants = [
+      'https://example.com/prompts/review.md',
+      'https://example.com/prompts/review.md?raw=1',
+      'https://example.com/prompts/review.md#usage',
+      'https://example.com/prompts/review.md?raw=1#usage',
+      'https://example.com/prompts/review.md#section/other.md',
+    ];
+
+    for (const source of variants) {
+      it(`infers "review" from the URL path for ${source}`, () => {
+        expect(inferName(source)).toBe('review');
+      });
+    }
+  });
 });
